@@ -6,7 +6,13 @@ Sometimes I have the need to query multiple MySQL databases with the same struct
 
 The following query will find all the databases with the prefix `wp_` and run a select query on each database and aggregate the results.
 ```bash
-mq --host=localhost --prefix=wp_ --query="SELECT * FROM wp_users"
+mq --host=localhost --dbprefix=wp_ --query="SELECT * FROM wp_users"
+```
+
+This query will ssh to another host and then connect via mysql and run the queries on individual threads
+
+```bash
+mq --host=10.10.10.100 --query="SELECT * FROM wp_users" --sshhost=wpserver --user=wp --password=[omitted] --threaded --dbprefix=wp_
 ```
 
 Use the help command to read about the other parameters that are supported

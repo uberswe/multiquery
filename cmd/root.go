@@ -54,6 +54,7 @@ func run(cmd *cobra.Command, args []string) {
 }
 
 func runMysql(dbNet string) {
+	log.Println("Running mysql")
 	var databasesToQuery []string
 	if db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@%s(%s:%s)/%s?parseTime=true", dbUser, dbPass, dbNet, dbHost, dbPort, dbName)); err == nil {
 		defer db.Close()
@@ -61,8 +62,12 @@ func runMysql(dbNet string) {
 			for rows.Next() {
 				var databaseName string
 				_ = rows.Scan(&databaseName)
+				if dbIgnore != "" && strings.Contains(databaseName, dbIgnore) {
+					// Skip if dbIgnore matches
+					continue
+				}
 				if dbPrefix != "" {
-					if strings.HasPrefix(databaseName, dbPrefix) && !strings.Contains(databaseName, dbIgnore) {
+					if strings.HasPrefix(databaseName, dbPrefix) {
 						databasesToQuery = append(databasesToQuery, databaseName)
 					}
 				} else {
@@ -75,6 +80,11 @@ func runMysql(dbNet string) {
 		}
 	}
 
+	if len(databasesToQuery) < 1 {
+		log.Fatal("No databases found")
+	}
+
+	log.Println("Running queries")
 	// Run the query
 	if dbQuery != "" {
 		queries := make(chan string)
@@ -102,6 +112,7 @@ func executeThreadedQuery(dbNet string, databaseName string, queries chan string
 }
 
 func executeQuery(dbNet string, databaseName string) {
+	log.Printf("Running query on %s\n", databaseName)
 	if db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@%s(%s:%s)/%s?parseTime=true", dbUser, dbPass, dbNet, dbHost, dbPort, databaseName)); err == nil {
 		defer db.Close()
 		if rows, err := db.Query(dbQuery); err == nil {
@@ -224,7 +235,7 @@ func runOverSSH(mysqlFunc func(dbNet string), dbNet string) {
 			return sshPass, nil
 		}))
 	}
-
+	log.Println("Connecting to ssh")
 	// Connect to the SSH Server
 	if sshcon, err := ssh.Dial("tcp", sshHost, sshConfig); err == nil {
 		defer sshcon.Close()
